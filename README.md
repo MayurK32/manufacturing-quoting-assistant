@@ -7,10 +7,15 @@ A modern quoting assistant for manufacturing parts, built to demonstrate LLM-pow
 This project simulates how an AI assistant can help manufacturers generate quick and accurate quotes for CNC parts and similar items.
 
 **Key features:**
-- Users enter a part description (or upload a CSV of parts).
-- The app uses a language model to extract features (material, size, operations, finish).
+- The sample CSV contains example data for manufacturing parts. The part descriptions are converted into embeddings and stored in a vector database for efficient similarity searches before making LLM calls.
+
+- Users upload a CSV file listing all parts required for their product.
+
+- The app uses a language model to extract features (material, size, operations, finish) from each part description.
+
 - Pricing is calculated using a rule-based system (Phase 1).
-- With more data, a custom ML model predicts prices (Phase 2).
+
+- As more data becomes available, a custom ML model can be trained to predict prices (Phase 2).
 
 ## 🛠️ Tech Stack
 
