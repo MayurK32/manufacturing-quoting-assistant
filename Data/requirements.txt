@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+openai
+chromadb
+scikit-learn
+tqdm
+langchain
