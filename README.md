@@ -46,4 +46,12 @@ quoting-assistant/
 ├── src/
 │ └── app.py
 
+## Virtual environment setup
+
+- uv venv .venv --python 3.11
+- activate
+-- uv venv .venv --python 3.11
+- Install dependencies
+-- uv pip install -r requirements.txt
+
 
