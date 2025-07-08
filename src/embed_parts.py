@@ -2,6 +2,8 @@
 
 import chromadb
 import hashlib
+import openai
+import os
 
 class PartEmbedder:
     def __init__(self, chroma_dir, collection_name):
@@ -14,10 +16,23 @@ class PartEmbedder:
         self.collection = self.client.create_collection(collection_name)
 
     @staticmethod
-    def get_embedding(text, model=None):
-        # This will be patched/mocked during tests,
-        # but for now, raise NotImplementedError to signal it's a placeholder.
-        raise NotImplementedError("get_embedding should be patched or implemented.")
+    def get_embeddings(texts, model="text-embedding-3-small"):
+        """
+        Get embeddings for a list of texts (batch mode).
+        """
+        openai.api_key = os.getenv("OPENAI_API_KEY")
+        if not openai.api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set!")
+
+        try:
+            response = openai.embeddings.create(
+                input=texts,
+                model=model
+            )
+            return [item.embedding for item in response.data]
+        except Exception as e:
+            print(f"Error generating batch embeddings.\nError: {e}")
+            raise
     
     @staticmethod
     def generate_id(row):
