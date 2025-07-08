@@ -47,7 +47,7 @@ class PartEmbedder:
         ids = [self.generate_id(row) for _, row in df.iterrows()]
         metadatas = df.drop(columns=["Part Description"]).to_dict(orient='records')
         embeddings = self.get_embeddings(documents)
-        self.collection.add(
+        self.collection.upsert(
             ids=ids,
             embeddings=embeddings,
             documents=documents,
@@ -55,7 +55,7 @@ class PartEmbedder:
         )
 
     def query(self, query_text, n_results=1):
-        emb = self.get_embedding(query_text)
+        emb = self.get_embeddings([query_text])[0]   # <-- Extract just the single embedding
         return self.collection.query(
             query_embeddings=[emb],
             n_results=n_results
