@@ -4,6 +4,9 @@ import chromadb
 import hashlib
 import openai
 import os
+from dotenv import load_dotenv
+
+load_dotenv() 
 
 class PartEmbedder:
     def __init__(self, chroma_dir, collection_name):
