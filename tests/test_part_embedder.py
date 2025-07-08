@@ -3,12 +3,19 @@ import pandas as pd
 import tempfile
 import shutil
 from unittest.mock import patch
+from src.embed_parts import PartEmbedder
+import atexit
 
 @pytest.fixture
 def temp_chroma_dir():
-    d = tempfile.mkdtemp() #runs before tests
+    d = tempfile.mkdtemp()
+    atexit.register(lambda: shutil.rmtree(d, ignore_errors=True))
     yield d
-    shutil.rmtree(d) #runs after tests
+    # Try immediate cleanup too
+    try:
+        shutil.rmtree(d)
+    except Exception:
+        pass  # Final cleanup will happen at exit
 
 @pytest.fixture
 def small_test_df():
@@ -24,14 +31,26 @@ def small_test_df():
         "Target Price (CHF)": [60, 80]
     })
 
-# ---- PSEUDO-TESTS ----
+def dummy_get_embedding(text, model=None):
+    # Returns a unique (but fixed-size) vector for each text
+    return [1.0] * 10 if "Aluminum" in text else [0.0] * 10
 
 def test_embedding_and_storage(temp_chroma_dir, small_test_df):
-    """
-    Test that embeddings are generated and stored for all parts.
-    - Patch embedding to avoid OpenAI calls.
-    - Check that ChromaDB contains correct number of documents.
-    """
+    # Patch PartEmbedder.get_embedding with dummy version
+    with patch.object(PartEmbedder, "get_embedding", staticmethod(dummy_get_embedding)):
+        embedder = PartEmbedder(
+            chroma_dir=temp_chroma_dir,
+            collection_name="test_parts"
+        )
+        embedder.process_dataframe(small_test_df)
+
+        # ChromaDB: check the number of documents
+        # Query all docs back
+        results = embedder.collection.get(include=['documents', 'metadatas'])
+        assert len(results['documents']) == len(small_test_df)
+        assert all(isinstance(doc, str) for doc in results['documents'])
+
+    print("test_embedding_and_storage passed.")
 
 def test_metadata_integrity(temp_chroma_dir, small_test_df):
     """
