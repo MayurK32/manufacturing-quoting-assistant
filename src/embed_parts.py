@@ -13,10 +13,7 @@ class PartEmbedder:
         self.chroma_dir = chroma_dir
         self.collection_name = collection_name
         self.client = chromadb.PersistentClient(path=chroma_dir)
-        # Delete collection if exists (for clean start in tests)
-        if collection_name in [c.name for c in self.client.list_collections()]:
-            self.client.delete_collection(collection_name)
-        self.collection = self.client.create_collection(collection_name)
+        self.collection = self.client.get_or_create_collection(collection_name)
 
     @staticmethod
     def get_embeddings(texts, model="text-embedding-3-small"):
