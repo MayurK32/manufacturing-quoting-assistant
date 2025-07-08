@@ -95,12 +95,43 @@ def test_query_by_similarity(temp_chroma_dir, small_test_df):
 def test_batch_add_and_duplicate_handling(temp_chroma_dir, small_test_df):
     """
     Test adding parts in batches and handling duplicate IDs gracefully.
+    When using hash-based IDs, adding the same data again should not create duplicates.
     """
+    with patch.object(PartEmbedder, "get_embedding", staticmethod(dummy_get_embedding)):
+        embedder = PartEmbedder(
+            chroma_dir=temp_chroma_dir,
+            collection_name="test_parts"
+        )
+        # Add first batch
+        embedder.process_dataframe(small_test_df)
+        count1 = len(embedder.collection.get(include=['documents'])['documents'])
+        # Add second batch (identical data, same IDs!)
+        embedder.process_dataframe(small_test_df)
+        count2 = len(embedder.collection.get(include=['documents'])['documents'])
+        # Should NOT increase, as entries are updated, not duplicated
+        assert count2 == count1
 
 def test_edge_cases_empty_dataframe(temp_chroma_dir):
     """
     Test handling of empty DataFrame (should not crash, returns 0 docs).
     """
+    df_empty = pd.DataFrame({
+        "Part Description": [],
+        "Material": [],
+        "Size": [],
+        "Operations": [],
+        "Finish": [],
+        "Target Price (CHF)": []
+    })
+
+    with patch.object(PartEmbedder, "get_embedding", staticmethod(dummy_get_embedding)):
+        embedder = PartEmbedder(
+            chroma_dir=temp_chroma_dir,
+            collection_name="test_empty"
+        )
+        embedder.process_dataframe(df_empty)
+        results = embedder.collection.get(include=['documents'])
+        assert len(results['documents']) == 0
 
 def test_chromadb_persistence(temp_chroma_dir, small_test_df):
     """

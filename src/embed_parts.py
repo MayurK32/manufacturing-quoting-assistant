@@ -1,6 +1,7 @@
 # src/embed_parts.py
 
 import chromadb
+import hashlib
 
 class PartEmbedder:
     def __init__(self, chroma_dir, collection_name):
@@ -17,10 +18,18 @@ class PartEmbedder:
         # This will be patched/mocked during tests,
         # but for now, raise NotImplementedError to signal it's a placeholder.
         raise NotImplementedError("get_embedding should be patched or implemented.")
+    
+    @staticmethod
+    def generate_id(row):
+        text = row["Part Description"]
+        return hashlib.md5(text.encode("utf-8")).hexdigest()
 
+    
     def process_dataframe(self, df):
+        if df.empty:
+            return
         documents = df["Part Description"].tolist()
-        ids = [f"part_{i}" for i in range(len(df))]
+        ids = [self.generate_id(row) for _, row in df.iterrows()]
         metadatas = df.drop(columns=["Part Description"]).to_dict(orient='records')
         embeddings = [self.get_embedding(desc) for desc in documents]
         self.collection.add(
