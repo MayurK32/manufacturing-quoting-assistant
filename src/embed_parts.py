@@ -46,7 +46,7 @@ class PartEmbedder:
         documents = df["Part Description"].tolist()
         ids = [self.generate_id(row) for _, row in df.iterrows()]
         metadatas = df.drop(columns=["Part Description"]).to_dict(orient='records')
-        embeddings = [self.get_embedding(desc) for desc in documents]
+        embeddings = self.get_embeddings(documents)
         self.collection.add(
             ids=ids,
             embeddings=embeddings,
