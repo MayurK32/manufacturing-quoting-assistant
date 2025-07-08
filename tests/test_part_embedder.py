@@ -56,11 +56,41 @@ def test_metadata_integrity(temp_chroma_dir, small_test_df):
     """
     Test that metadata is saved and matches input DataFrame.
     """
+    # Patch PartEmbedder.get_embedding with dummy version
+    with patch.object(PartEmbedder, "get_embedding", staticmethod(dummy_get_embedding)):
+        embedder = PartEmbedder(
+            chroma_dir=temp_chroma_dir,
+            collection_name="test_parts"
+        )
+        embedder.process_dataframe(small_test_df)
+
+        # ChromaDB: check the number of documents
+        # Query all docs back
+        results = embedder.collection.get(include=['documents', 'metadatas'])
+
+        for meta in results['metadatas']:
+            assert 'Material' in meta
+            assert 'Size' in meta
+            assert 'Operations' in meta
+            assert 'Finish' in meta
+            assert 'Target Price (CHF)' in meta
 
 def test_query_by_similarity(temp_chroma_dir, small_test_df):
     """
     Test that querying by similar text returns the expected part.
     """
+
+    with patch.object(PartEmbedder, "get_embedding", staticmethod(dummy_get_embedding)):
+        embedder = PartEmbedder(
+            chroma_dir=temp_chroma_dir,
+            collection_name="test_parts"
+        )
+        embedder.process_dataframe(small_test_df)
+        result = embedder.query('Aluminum',n_results=1)
+
+        returned_doc = result['documents'][0][0]
+        assert 'Aluminum' in returned_doc
+
 
 def test_batch_add_and_duplicate_handling(temp_chroma_dir, small_test_df):
     """

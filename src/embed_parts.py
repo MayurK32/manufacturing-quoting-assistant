@@ -31,7 +31,9 @@ class PartEmbedder:
         )
 
     def query(self, query_text, n_results=1):
+        emb = self.get_embedding(query_text)
         return self.collection.query(
-            query_texts=[query_text],
+            query_embeddings=[emb],
             n_results=n_results
         )
+
