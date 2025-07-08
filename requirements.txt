@@ -6,3 +6,4 @@ chromadb
 scikit-learn
 tqdm
 langchain
+pytest
