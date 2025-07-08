@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 from embed_parts import PartEmbedder
+import json
+import openai
+from training_prompt import cnc_training_prompt
 
 st.set_page_config(page_title="Quoting Assistant", layout="centered")
 
@@ -50,13 +53,43 @@ if uploaded_file:
                 if not result["documents"][0]:
                     st.error("No similar parts found. Try indexing data or refining your query.")
                 else:
-                    st.success("Closest past part found!")
-                    st.subheader("Closest Past Part Description:")
-                    st.write(result["documents"][0][0])
-                    st.subheader("Metadata:")
-                    st.json(result["metadatas"][0][0])
-                    st.metric(
-                        "Estimated Price (CHF)",
-                        result["metadatas"][0][0].get("Target Price (CHF)", "N/A"),
-                    )
-                    st.caption("Price is taken from the most similar past part in your data.")
+                    doc = result["documents"][0][0]
+                    meta = result["metadatas"][0][0]
+                    similar_price = meta.get("Target Price (CHF)", "")
+                    similar_features = {
+                        "Material": meta.get("Material", ""),
+                        "Size": meta.get("Size", ""),
+                        "Operations": meta.get("Operations", ""),
+                        "Finish": meta.get("Finish", "")
+                    }
+
+                    # Build AI prompt for LLM agent
+                    prompt = cnc_training_prompt(query,similar_price,doc,similar_features)
+
+
+                    with st.spinner("Letting the AI agent calculate your quote..."):
+                        try:
+                            response = openai.chat.completions.create(
+                                model="gpt-4o",
+                                messages=[{"role": "system", "content": prompt}],
+                                temperature=0
+                            )
+                            ai_output = response.choices[0].message.content.strip()
+
+                            # Clean code fencing if present
+                            if ai_output.startswith("```"):
+                                ai_output = ai_output.split("```")[-2] if "```" in ai_output else ai_output
+                            ai_output = ai_output.strip()
+                            if ai_output.startswith("json"):
+                                ai_output = ai_output[4:].strip()
+                            # Now try to parse
+                            try:
+                                result_json = json.loads(ai_output)
+                                st.success("AI-generated quote breakdown:")
+                                st.json(result_json)
+                                st.caption(result_json.get("Explanation", ""))
+                            except json.JSONDecodeError:
+                                st.error("AI response could not be parsed as JSON. Showing raw output:")
+                                st.code(ai_output)
+                        except Exception as e:
+                            st.error(f"OpenAI API call failed: {e}")
