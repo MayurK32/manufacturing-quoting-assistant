@@ -10,3 +10,8 @@ st.write(
 )
 
 uploaded_file = st.file_uploader("Upload your manufacturing parts CSV", type=["csv"])
+
+if uploaded_file:
+    df = pd.read_csv(uploaded_file)
+    st.success("CSV uploaded successfully! Here is a preview of your data:")
+    st.dataframe(df)
