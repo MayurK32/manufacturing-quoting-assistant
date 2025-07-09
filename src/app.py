@@ -4,6 +4,7 @@ from embed_parts import PartEmbedder
 import json
 import openai
 from training_prompt import cnc_training_prompt
+from features import PartFeatures
 
 st.set_page_config(page_title="Quoting Assistant", layout="centered")
 
@@ -36,9 +37,12 @@ if uploaded_file:
  # ---------  QUERY UI ---------
 
     st.header("Quote a New Part")
-    query = st.text_input(
-        "Describe your new part (e.g., 'Aluminum bracket, 100x50x5 mm, drilling, anodized')"
-    )
+    st.subheader("Enter New Part Details")
+    user_material = st.text_input("Material (e.g., Aluminum)")
+    user_size = st.text_input("Size (e.g., 100x50x5 mm)")
+    user_operations = st.text_input("Operations (comma-separated, e.g., drilling, milling)")
+    user_finish = st.text_input("Finish (e.g., anodized)")
+    query = st.text_input("Part Description (free text, optional)", value="")
 
     if st.button("Get Quote"):
         if query.strip() == "":
@@ -55,16 +59,26 @@ if uploaded_file:
                 else:
                     doc = result["documents"][0][0]
                     meta = result["metadatas"][0][0]
-                    similar_price = meta.get("Target Price (CHF)", "")
-                    similar_features = {
-                        "Material": meta.get("Material", ""),
-                        "Size": meta.get("Size", ""),
-                        "Operations": meta.get("Operations", ""),
-                        "Finish": meta.get("Finish", "")
+                    ref_features = PartFeatures.feature_dict(meta)
+                    similar_price = ref_features.get("Target Price (CHF)", "")
+
+                    user_row = {
+                        "Material": user_material,
+                        "Size": user_size,
+                        "Operations": user_operations,
+                        "Finish": user_finish,
+                        "Part Description": query
                     }
+                    query_features = PartFeatures.feature_dict(user_row)
+
 
                     # Build AI prompt for LLM agent
-                    prompt = cnc_training_prompt(query,similar_price,doc,similar_features)
+                    prompt = cnc_training_prompt(
+                            query=query_features,
+                            similar_price=similar_price,
+                            similar_part=doc,
+                            similar_features=ref_features
+                        )
 
 
                     with st.spinner("Letting the AI agent calculate your quote..."):
@@ -85,9 +99,15 @@ if uploaded_file:
                             # Now try to parse
                             try:
                                 result_json = json.loads(ai_output)
+                                print(result_json)
+                                query_features["Target Price (CHF)"] = result_json.get("Total Quote")
                                 st.success("AI-generated quote breakdown:")
                                 st.json(result_json)
                                 st.caption(result_json.get("Explanation", ""))
+                                st.subheader("Reference Part Features:")
+                                st.json(ref_features)
+                                st.subheader("Queried Part Features:")
+                                st.json(query_features)
                             except json.JSONDecodeError:
                                 st.error("AI response could not be parsed as JSON. Showing raw output:")
                                 st.code(ai_output)
