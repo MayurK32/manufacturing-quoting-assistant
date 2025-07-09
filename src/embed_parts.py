@@ -14,6 +14,16 @@ class PartEmbedder:
         self.collection_name = collection_name
         self.client = chromadb.PersistentClient(path=chroma_dir)
         self.collection = self.client.get_or_create_collection(collection_name)
+    
+    def row_to_embedding_text(self,row):
+    # Join with clear labels for each field for LLM-style embeddings
+        return (
+            f"Material: {row['Material']} | "
+            f"Size: {row['Size']} | "
+            f"Operations: {row['Operations']} | "
+            f"Finish: {row['Finish']} | "
+            f"Description: {row['Part Description']}"
+        )
 
     @staticmethod
     def get_embeddings(texts, model="text-embedding-3-small"):
@@ -43,8 +53,10 @@ class PartEmbedder:
     def process_dataframe(self, df):
         if df.empty:
             return
-        documents = df["Part Description"].tolist()
+        # Compose rich strings for embedding input
+        documents = [self.row_to_embedding_text(row) for _, row in df.iterrows()]
         ids = [self.generate_id(row) for _, row in df.iterrows()]
+        # Keep metadatas as before
         metadatas = df.drop(columns=["Part Description"]).to_dict(orient='records')
         embeddings = self.get_embeddings(documents)
         self.collection.upsert(
